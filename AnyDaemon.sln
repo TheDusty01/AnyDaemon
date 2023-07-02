@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33815.320
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnyDaemon.Manager", "AnyDaemon\AnyDaemon.Manager.csproj", "{17606D24-C3E5-448E-8CF8-C5743944810E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnyDaemon.Manager", "AnyDaemon\AnyDaemon.Manager.csproj", "{17606D24-C3E5-448E-8CF8-C5743944810E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnyDaemon.UI.Cli", "AnyDaemon.UI.Cli\AnyDaemon.UI.Cli.csproj", "{12E91AE8-AAE7-4503-9EE8-0029C2AA6C3E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AnyDaemon.UI.Cli", "AnyDaemon.UI.Cli\AnyDaemon.UI.Cli.csproj", "{12E91AE8-AAE7-4503-9EE8-0029C2AA6C3E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnyDaemon.Service", "AnyDaemon.Service\AnyDaemon.Service.csproj", "{63583C6B-D7EF-487C-9D78-C3B80A0B1770}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{12E91AE8-AAE7-4503-9EE8-0029C2AA6C3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{12E91AE8-AAE7-4503-9EE8-0029C2AA6C3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{12E91AE8-AAE7-4503-9EE8-0029C2AA6C3E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63583C6B-D7EF-487C-9D78-C3B80A0B1770}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63583C6B-D7EF-487C-9D78-C3B80A0B1770}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63583C6B-D7EF-487C-9D78-C3B80A0B1770}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63583C6B-D7EF-487C-9D78-C3B80A0B1770}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
