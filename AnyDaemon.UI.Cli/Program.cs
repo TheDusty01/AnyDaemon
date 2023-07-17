@@ -14,7 +14,7 @@ public class Program
                 var services = new ServiceCollection();
 
                 // Register services
-                services.AddAdInstaller();
+                services.AddAdServiceManager();
 
 
                 // Register commands

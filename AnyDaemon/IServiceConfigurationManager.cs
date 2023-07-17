@@ -6,7 +6,13 @@ public interface IServiceConfigurationManager
 {
     Task SaveConfigurationAsync(ServiceConfiguration config, CancellationToken ct);
     Task DeleteConfigurationAsync(string serviceName, CancellationToken ct);
-    Task<ServiceConfiguration?> GetConfigurationAsync(string serviceName, CancellationToken ct);
+    /// <summary>
+    /// Throws if configuration cannot be loaded
+    /// </summary>
+    /// <param name="serviceName"></param>
+    /// <param name="ct"></param>
+    /// <returns></returns>
+    Task<ServiceConfiguration> GetConfigurationAsync(string serviceName, CancellationToken ct);
 }
 
 public class ServiceConfigurationManager : IServiceConfigurationManager
@@ -28,6 +34,7 @@ public class ServiceConfigurationManager : IServiceConfigurationManager
     {
         using var fs = File.OpenRead(AnyDaemonInstallationHelper.GetConfigPath(serviceName));
         var config = await JsonSerializer.DeserializeAsync<ServiceConfiguration>(fs, cancellationToken: ct);
+
         return config!;
     }
 }

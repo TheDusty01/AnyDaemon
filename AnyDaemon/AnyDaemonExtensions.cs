@@ -4,7 +4,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 public static class AnyDaemonExtensions
 {
-    public static IServiceCollection AddAdInstaller(this IServiceCollection services)
+    public static IServiceCollection AddAdServiceManager(this IServiceCollection services)
     {
         services.AddSingleton<IServiceManager, ServiceManager>();
 
