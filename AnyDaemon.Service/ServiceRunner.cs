@@ -39,7 +39,9 @@ public class ServiceRunner : BackgroundService
 
         // Start underlying service
         var builder = Cli.Wrap(serviceConfig.ServiceDescriptor.ExecutablePath)
-            .WithWorkingDirectory(serviceConfig.ServiceDescriptor.WorkingDir);
+            .WithWorkingDirectory(serviceConfig.ServiceDescriptor.WorkingDir)
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(WriteToStdOutAsync))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(WriteToStdErrAsync));
 
         if (serviceConfig.ServiceDescriptor.Arguments is not null)
             builder = builder.WithArguments(serviceConfig.ServiceDescriptor.Arguments);
@@ -47,14 +49,36 @@ public class ServiceRunner : BackgroundService
         var result = await builder
             .WithValidation(CommandResultValidation.None)
             .ExecuteAsync(ct);
-        
+
         // Print meta data
         logger.LogInformation(
             "Underlying process stopped with {exitCode} exit code. Running for {duration}",
             result.ExitCode,
             result.RunTime
         );
+    }
 
-        lifetime.StopApplication();
+    private Task WriteToStdOutAsync(string line, CancellationToken ct)
+    {
+        // TODO: move to service config
+        var path = Path.Combine(serviceConfig.ServiceDescriptor.WorkingDir, "_stdOut.log");
+        if (true)
+#pragma warning disable CA2254 // Template should be a static expression
+            logger.LogInformation(line);
+#pragma warning restore CA2254 // Template should be a static expression
+
+        return File.AppendAllTextAsync(path, $"{line}{Environment.NewLine}", ct);
+    }
+
+    private Task WriteToStdErrAsync(string line, CancellationToken ct)
+    {
+        // TODO: move to service config
+        var path = Path.Combine(serviceConfig.ServiceDescriptor.WorkingDir, "_stdErr.log");
+        if (true)
+#pragma warning disable CA2254 // Template should be a static expression
+            logger.LogInformation(line);
+#pragma warning restore CA2254 // Template should be a static expression
+
+        return File.AppendAllTextAsync(path, $"{line}{Environment.NewLine}", ct);
     }
 }

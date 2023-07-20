@@ -1,6 +1,7 @@
 ﻿using CliWrap;
 using CliWrap.Buffered;
 using FastEnumUtility;
+using System.Collections;
 
 namespace AnyDaemon;
 
@@ -17,6 +18,25 @@ public interface IServiceManager
 
     Task<ServiceConfiguration> GetServiceInfoAsync(string serviceName, CancellationToken ct = default);
     Task<DaemonStatus> GetServiceStatus(string serviceName, CancellationToken ct = default);
+}
+
+public class ServiceControlException : Exception
+{
+    public int ExitCode { get; }
+
+    public ServiceControlException(string output, int exitCode)
+        : base($"sc.exe failed with exit code {exitCode}.\n{output}")
+    {
+        ExitCode = exitCode;
+    }
+}
+
+public class AnyDaemonNotInstalledException : Exception
+{
+    public AnyDaemonNotInstalledException()
+        : base("AnyDaemon is not installed")
+    {
+    }
 }
 
 public class ServiceManager : IServiceManager
@@ -39,119 +59,90 @@ public class ServiceManager : IServiceManager
 
     public async Task CreateServiceAsync(ServiceConfiguration config, CancellationToken ct = default)
     {
-        try
-        {
-            await Cli.Wrap("sc")
-                .WithArguments(ConvertDescriptorToArgs("create", config.ServiceDescriptor))
-                .WithValidation(CommandResultValidation.ZeroExitCode)
-                .ExecuteAsync(ct);
+        AnyDaemonInstallationHelper.ThrowIfNotInstalled();
 
-            // Only execute if the ServiceControl command did not fail
-            await configurationManager.SaveConfigurationAsync(config, ct);
-        }
-        catch
-        {
-            throw;
-        }
+        await ExecuteServiceControl("create", ConvertDescriptorToArgs(config.ServiceDescriptor), ct);
+
+        // Only execute if the ServiceControl command did not fail
+        await configurationManager.SaveConfigurationAsync(config, ct);
     }
 
     public async Task EditServiceAsync(ServiceConfiguration config, CancellationToken ct = default)
     {
-        try
-        {
-            await Cli.Wrap("sc")
-                .WithArguments(ConvertDescriptorToArgs("config", config.ServiceDescriptor))
-                .WithValidation(CommandResultValidation.ZeroExitCode)
-                .ExecuteAsync(ct);
+        AnyDaemonInstallationHelper.ThrowIfNotInstalled();
 
-            // Only execute if the ServiceControl command did not fail
-            await configurationManager.SaveConfigurationAsync(config, ct);
-        }
-        catch
-        {
-            throw;
-        }
+        await ExecuteServiceControl("config", ConvertDescriptorToArgs(config.ServiceDescriptor), ct);
+
+        // Only execute if the ServiceControl command did not fail
+        await configurationManager.SaveConfigurationAsync(config, ct);
     }
 
     public async Task DeleteServiceAsync(string serviceName, CancellationToken ct = default)
     {
-        try
-        {
-            await Cli.Wrap("sc")
-                .WithArguments(new[]
-                {
-                    "delete",
-                    serviceName
-                })
-                .WithValidation(CommandResultValidation.ZeroExitCode)
-                .ExecuteAsync(ct);
+        AnyDaemonInstallationHelper.ThrowIfNotInstalled();
 
-            // Only execute if the ServiceControl command did not fail
-            await configurationManager.DeleteConfigurationAsync(serviceName, ct);
-        }
-        catch
-        {
-            throw;
-        }
+        await ExecuteServiceControl("delete", new[] { serviceName }, ct);
+
+        // Only execute if the ServiceControl command did not fail
+        await configurationManager.DeleteConfigurationAsync(serviceName, ct);
     }
 
     public async Task StartServiceAsync(string serviceName, CancellationToken ct = default)
     {
-        await Cli.Wrap("sc")
-            .WithArguments(new[]
-            {
-                "start",
-                serviceName
-            })
-            .WithValidation(CommandResultValidation.ZeroExitCode)
-            .ExecuteAsync(ct);
-    }
+        AnyDaemonInstallationHelper.ThrowIfNotInstalled();
 
+        await ExecuteServiceControl("start", new[] { serviceName }, ct);
+    }
 
     public async Task StopServiceAsync(string serviceName, CancellationToken ct = default)
     {
-        await Cli.Wrap("sc")
-            .WithArguments(new[]
-            {
-                "stop",
-                serviceName
-            })
-            .WithValidation(CommandResultValidation.ZeroExitCode)
-            .ExecuteAsync(ct);
+        AnyDaemonInstallationHelper.ThrowIfNotInstalled();
+
+        await ExecuteServiceControl("stop", new[] { serviceName }, ct);
     }
 
     public async Task<ServiceConfiguration> GetServiceInfoAsync(string serviceName, CancellationToken ct = default)
     {
-        var result = await Cli.Wrap("sc")
-            .WithArguments(new[]
-            {
-                "qc",
-                serviceName
-            })
-            .WithValidation(CommandResultValidation.ZeroExitCode)
-            .ExecuteBufferedAsync(ct);
+        AnyDaemonInstallationHelper.ThrowIfNotInstalled();
+
+        var result = await ExecuteServiceControl("qc", new[] { serviceName }, ct);
 
         return ParseConfiguration(result.StandardOutput);
     }
 
     public async Task<DaemonStatus> GetServiceStatus(string serviceName, CancellationToken ct = default)
     {
-        var result = await Cli.Wrap("sc")
-            .WithArguments(new[]
-            {
-                "query",
-                serviceName
-            })
-            .WithValidation(CommandResultValidation.ZeroExitCode)
-            .ExecuteBufferedAsync(ct);
+        AnyDaemonInstallationHelper.ThrowIfNotInstalled();
+
+        var result = await ExecuteServiceControl("query", new[] { serviceName }, ct);
 
         return ParseStatus(result.StandardOutput);
     }
 
-    private static string[] ConvertDescriptorToArgs(string action, DaemonDescriptor options)
+    private static async Task<BufferedCommandResult> ExecuteServiceControl(string action, string[] args, CancellationToken ct)
+    {
+        //var fullArgs = args.Prepend(action);
+        var fullArgs = new string[args.Length + 1];
+        fullArgs[0] = action;
+        Array.Copy(args, 0, fullArgs, 1, args.Length);
+
+        var result = await Cli.Wrap("sc")
+            .WithArguments(fullArgs)
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteBufferedAsync(ct);
+
+        if (result.ExitCode != 0)
+        {
+            throw new ServiceControlException(result.StandardOutput, result.ExitCode);
+        }
+
+        return result;
+    }
+
+    private static string[] ConvertDescriptorToArgs(DaemonDescriptor options)
     {
         // $"binPath=dotnet {AnyDaemonServiceRunner}",
-        var startCommand = $"{AnyDaemonInstallationHelper.ServiceRunnerExecutableName} {AnyDaemonInstallationHelper.ServiceNameArgument}={options.Name}";
+        var startCommand = $"{AnyDaemonInstallationHelper.GetInstallationPath()} {AnyDaemonInstallationHelper.ServiceNameArgument}={options.Name}";
 
         // Put the arguments into the json config file
         //if (options.Arguments is null)
@@ -159,11 +150,10 @@ public class ServiceManager : IServiceManager
 
         return new[]
         {
-            action,
             options.Name,
             $"binPath={startCommand}",
-            $"start={options.StartType.FastToString()}",
-            $"displayname={options.FullDisplayName}"
+            $"start={options.StartType.GetLabel()}",
+            $"displayname={options.DisplayName}"
         };
     }
 

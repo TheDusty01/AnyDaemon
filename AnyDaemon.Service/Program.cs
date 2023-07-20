@@ -1,12 +1,43 @@
+using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging.Configuration;
+using Microsoft.Extensions.Logging.EventLog;
 using AnyDaemon.Service;
+using System.Runtime.Versioning;
+using AnyDaemon;
+using System.ServiceProcess;
 
-var host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services =>
+[SupportedOSPlatform("windows")]
+internal class Program
+{
+    private static void Main(string[] args)
     {
-        services.AddAdConfigurationManager();
+        var host = Host.CreateDefaultBuilder(args)
+            .UseWindowsService()
+            .ConfigureServices((host, services) =>
+            {
+                LoggerProviderOptions.RegisterProviderOptions<
+                    EventLogSettings, EventLogLoggerProvider>(services);
 
-        services.AddHostedService<ServiceRunner>();
-    })
-    .Build();
+                services.AddAdConfigurationManager();
+                services.AddHostedService<ServiceRunner>();
+            })
+            .ConfigureLogging((host, logging) =>
+            {
+                logging.AddConfiguration(host.Configuration.GetSection("Logging"));
 
-host.Run();
+                var serviceName = host.Configuration[AnyDaemonInstallationHelper.ServiceNameArgument] ??
+                    throw new Exception("ServiceName is not set");
+
+                logging.AddEventLog(options =>
+                {
+                    var sc = new ServiceController(serviceName);
+                    options.SourceName = sc.DisplayName;
+
+                    sc.Close();
+                });
+            })
+            .Build();
+
+        host.Run();
+    }
+}

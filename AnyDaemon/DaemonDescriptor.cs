@@ -9,6 +9,4 @@ public class DaemonDescriptor
     public ServiceStartType StartType { get; set; } = ServiceStartType.Delayed;
 
     public required string DisplayName { get; set; }
-    public string DisplayNamePrefix { get; set; } = "AnyDaemon: ";
-    public string FullDisplayName => $"{DisplayNamePrefix}{DisplayName}";
 }

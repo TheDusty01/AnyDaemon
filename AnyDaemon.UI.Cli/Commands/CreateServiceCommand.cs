@@ -1,10 +1,11 @@
 ﻿using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
+using System.Diagnostics;
 
 namespace AnyDaemon.UI.Cli.Commands;
 
-[Command(Description = "Creates a new AnyDaemon service")]
+[Command("create", Description = "Creates a new AnyDaemon service")]
 public class CreateServiceCommand : ICommand
 {
     private readonly IServiceManager serviceManager;
@@ -14,10 +15,10 @@ public class CreateServiceCommand : ICommand
         this.serviceManager = serviceManager;
     }
 
-    [CommandParameter(0, Description = "")]
+    [CommandParameter(0, Description = "Unique service name")]
     public required string Name { get; init; }
 
-    [CommandParameter(1, Description = "")]
+    [CommandParameter(1, Description = "Display name of the service")]
     public required string DisplayName { get; init; }
 
     [CommandParameter(2, Description = "")]
@@ -39,30 +40,28 @@ public class CreateServiceCommand : ICommand
     {
         var ct = console.RegisterCancellationHandler();
 
-        var config = new ServiceConfiguration
+        var prefix = DisplayNamePrefix is null ? $"AnyDaemon" : DisplayNamePrefix;
+        var serviceDescriptor = new DaemonDescriptor
         {
-            ServiceDescriptor = new DaemonDescriptor
-            {
-                Name = Name,
-                DisplayName = DisplayName,
-                ExecutablePath = ExecutablePath,
-                WorkingDir = WorkingDir,
-                Arguments = Arguments,
-            }
+            Name = Name,
+            DisplayName = $"{prefix}: {DisplayName}",
+            ExecutablePath = ExecutablePath,
+            WorkingDir = WorkingDir,
+            Arguments = Arguments,
         };
-        if (DisplayNamePrefix is not null)
-            config.ServiceDescriptor.DisplayNamePrefix = DisplayNamePrefix;
         if (StartType is not null)
-            config.ServiceDescriptor.StartType = StartType.Value;
-
+            serviceDescriptor.StartType = StartType.Value;
 
         try
         {
-            await serviceManager.CreateServiceAsync(config, ct);
+            await serviceManager.CreateServiceAsync(new ServiceConfiguration
+            {
+                ServiceDescriptor = serviceDescriptor
+            }, ct);
         }
         catch (Exception ex)
         {
-            console.Output.WriteLine($"Failed to create service: {ex.Message}\n:{ex.StackTrace}");
+            console.Output.WriteLine($"Failed to create service: {ex.Message}");
             return;
         }
 

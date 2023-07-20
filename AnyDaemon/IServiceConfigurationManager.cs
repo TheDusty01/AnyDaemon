@@ -19,6 +19,10 @@ public class ServiceConfigurationManager : IServiceConfigurationManager
 {
     public async Task SaveConfigurationAsync(ServiceConfiguration config, CancellationToken ct)
     {
+        var configPath = AnyDaemonInstallationHelper.GetConfigPath(config.ServiceDescriptor.Name);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+
         using var fs = File.Create(AnyDaemonInstallationHelper.GetConfigPath(config.ServiceDescriptor.Name));
         await JsonSerializer.SerializeAsync(fs, config, AnyDaemonConstants.IntendedJsonOptions, ct);
     }
